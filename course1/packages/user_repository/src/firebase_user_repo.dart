@@ -3,46 +3,68 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import 'models/models.dart';
 import 'user_repo.dart';
+import './entities/entities.dart';
 
 class FirebaseUserRepo implements UserRepository {
   final FirebaseAuth _firebaseAuth;
-  final useCollections = FirebaseFirestore.instance.collection('users');
+  final userCollections = FirebaseFirestore.instance.collection('users');
   FirebaseUserRepo({
     FirebaseAuth? firebaseAuth,
   }) : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance;
-@override
+  @override
   // TODO: implement user
   Stream<MyUser> get user {
-    return _firebaseAuth.authStateChanges().flatMap(firebaseUser) async* {
+    return _firebaseAuth.authStateChanges().asyncMap((firebaseUser) async {
       if (firebaseUser == null) {
-        yield MyUser.empty;
+        return MyUser.empty;
       } else {
-      yield await useCollections.doc(firebaseUser.uid).get().then((value) =>MyUser.fromEntity(MyUserEntity.fromDocument(value.data)()!));
-       }
-    }; 
+        // Fetch the user data from Firestore
+        var documentSnapshot = await userCollections.doc(firebaseUser.uid).get();
+        var userData = documentSnapshot.data();
+
+        // Check if userData is not null and convert it to a MyUser instance
+        if (userData != null) {
+          return MyUser.fromEntity(MyUserEntity.fromDocument(userData));
+        } else {
+          // If the document does not exist, return MyUser.empty
+          return MyUser.empty;
+        }
+      }
+    });
   }
 
   @override
-  Future<void> logOut() {
-    // TODO: implement logOut
-    throw UnimplementedError();
+  Future<MyUser> signUp(MyUser myUser, String password) async {
+    
+    
+    try {
+      UserCredential user = await _firebaseAuth.createUserWithEmailAndPassword(
+          email: myUser.email, password: password);
+      myUser.userId = user.user!.uid;
+      return myUser;
+    } catch (e) {
+      throw (e.toString());
+    }
   }
 
   @override
-  Future<void> setUserData(user) {
-    // TODO: implement setUserData
-    throw UnimplementedError();
+  Future<void> logOut() async{
+    await _firebaseAuth.signOut();
   }
+
+  @override
+  Future<void> setUserData(MyUser myUser) async{
+    try {
+      await userCollections.doc(myUser.userId).set(myUser.toEntity().toDocument());
+    } catch (e) {
+      throw (e.toString());
+    }
+  }
+  
 
   @override
   Future<void> signIn(String email, String password) {
     // TODO: implement signIn
     throw UnimplementedError();
   }
-
- @override
-Future<MyUser> signUp(MyUser myUser, String password) async {
-  // TODO: implement signUp
-  throw UnimplementedError();
-}
 }
