@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import 'models/models.dart';
 import 'user_repo.dart';
-import './entities/entities.dart';
+import 'entities/entities.dart';
 
 class FirebaseUserRepo implements UserRepository {
   final FirebaseAuth _firebaseAuth;
